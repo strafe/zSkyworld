@@ -13,6 +13,7 @@
 	2017.05.25	added cvar, areas, csgo
 	2017.05.27	added pause on jump (thanks bogroll <3)
 	2017.06.06	added colour, cookies. removed regex
+	2017.06.07	added spectator jump support
 */
 
 public Plugin myinfo = {
@@ -377,10 +378,10 @@ public MenuColourHandler(Handle menu, MenuAction action, param1, param2){
 }
 
 public Action OnTimer(Handle timer){
-	float fVel[3];
 	char sOutput[64];
+	float fVel[3], fArea[2];
 	for (int client=1; client<=MaxClients; client++){
-		if (IsClientInGame(client) && g_ClientOnOff[client]){
+		if (IsClientInGame(client)){
 			GetEntPropVector(client, Prop_Data, "m_vecVelocity", fVel);
 
 			switch (g_JumpState[client]){
@@ -399,14 +400,31 @@ public Action OnTimer(Handle timer){
 					g_JumpVel[client] = fVel;
 				}
 			}
+		}
+
+		if (IsClientInGame(client) && g_ClientOnOff[client]){
+			int iTarget = client;
+			if (!IsPlayerAlive(client) || IsClientObserver(client)){
+				int iSpecMode = GetEntProp(client, Prop_Send, "m_iObserverMode");
+				if (iSpecMode == 4 || iSpecMode == 5)
+				{
+					iTarget = GetEntPropEnt(client, Prop_Send, "m_hObserverTarget");
+				}
+			}
+
+			if (iTarget <= 0 || iTarget > MaxClients)
+				iTarget = client;
+
+			if (!IsClientInGame(iTarget))
+				iTarget = client;
 
 			switch (g_ClientDisplayType[client]){
 				case DisplayTypeVelocityXY:
 				{
-					if (g_ClientJumpOnOff[client] && g_JumpState[client] == JumpStateSaved){
+					if (g_ClientJumpOnOff[client] && g_JumpState[iTarget] == JumpStateSaved){
 						Format(sOutput, sizeof(sOutput), "%.1f\n%.1f",
 							SquareRoot((fVel[0] * fVel[0]) + (fVel[1] * fVel[1])),
-							SquareRoot((g_JumpVel[client][0] * g_JumpVel[client][0]) + (g_JumpVel[client][1] * g_JumpVel[client][1])));
+							SquareRoot((g_JumpVel[iTarget][0] * g_JumpVel[iTarget][0]) + (g_JumpVel[iTarget][1] * g_JumpVel[iTarget][1])));
 					}
 					else {
 						Format(sOutput, sizeof(sOutput), "%.1f",
@@ -415,10 +433,10 @@ public Action OnTimer(Handle timer){
 				}
 				case DisplayTypeVelocityXYZ:
 				{
-					if (g_ClientJumpOnOff[client] && g_JumpState[client] == JumpStateSaved){
+					if (g_ClientJumpOnOff[client] && g_JumpState[iTarget] == JumpStateSaved){
 						Format(sOutput, sizeof(sOutput), "%.1f\n%.1f",
 							SquareRoot((fVel[0] * fVel[0]) + (fVel[1] * fVel[1]) + (fVel[2] * fVel[2])),
-							SquareRoot((g_JumpVel[client][0] * g_JumpVel[client][0]) + (g_JumpVel[client][1] * g_JumpVel[client][1]) + (g_JumpVel[client][2] * g_JumpVel[client][2])));
+							SquareRoot((g_JumpVel[iTarget][0] * g_JumpVel[iTarget][0]) + (g_JumpVel[iTarget][1] * g_JumpVel[iTarget][1]) + (g_JumpVel[iTarget][2] * g_JumpVel[iTarget][2])));
 					}
 					else {
 						Format(sOutput, sizeof(sOutput), "%.1f",
@@ -427,10 +445,10 @@ public Action OnTimer(Handle timer){
 				}
 				case DisplayTypeMPH:
 				{
-					if (g_ClientJumpOnOff[client] && g_JumpState[client] == JumpStateSaved){
+					if (g_ClientJumpOnOff[client] && g_JumpState[iTarget] == JumpStateSaved){
 						Format(sOutput, sizeof(sOutput), "%.1f\n%.1f",
 							(SquareRoot((fVel[0] * fVel[0]) + (fVel[1] * fVel[1]) + (fVel[2] * fVel[2])) / 26.0),
-							(SquareRoot((g_JumpVel[client][0] * g_JumpVel[client][0]) + (g_JumpVel[client][1] * g_JumpVel[client][1]) + (g_JumpVel[client][2] * g_JumpVel[client][2])) / 26.0));
+							(SquareRoot((g_JumpVel[iTarget][0] * g_JumpVel[iTarget][0]) + (g_JumpVel[iTarget][1] * g_JumpVel[iTarget][1]) + (g_JumpVel[iTarget][2] * g_JumpVel[iTarget][2])) / 26.0));
 					}
 					else {
 						Format(sOutput, sizeof(sOutput), "%.1f",
@@ -439,10 +457,10 @@ public Action OnTimer(Handle timer){
 				}
 				case DisplayTypeKPH:
 				{
-					if (g_ClientJumpOnOff[client] && g_JumpState[client] == JumpStateSaved){
+					if (g_ClientJumpOnOff[client] && g_JumpState[iTarget] == JumpStateSaved){
 						Format(sOutput, sizeof(sOutput), "%.1f\n%.1f",
 							((SquareRoot((fVel[0] * fVel[0]) + (fVel[1] * fVel[1]) + (fVel[2] * fVel[2])) / 26.0) * 1.609),
-							((SquareRoot((g_JumpVel[client][0] * g_JumpVel[client][0]) + (g_JumpVel[client][1] * g_JumpVel[client][1]) + (g_JumpVel[client][2] * g_JumpVel[client][2])) / 26.0) * 1.609));
+							((SquareRoot((g_JumpVel[iTarget][0] * g_JumpVel[iTarget][0]) + (g_JumpVel[iTarget][1] * g_JumpVel[iTarget][1]) + (g_JumpVel[iTarget][2] * g_JumpVel[iTarget][2])) / 26.0) * 1.609));
 					}
 					else {
 						Format(sOutput, sizeof(sOutput), "%.1f",
