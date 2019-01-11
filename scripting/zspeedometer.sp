@@ -1,5 +1,6 @@
 #pragma semicolon 1
 #include <sourcemod>
+#include <clientprefs>
 #include <sdktools>
 #include <sdkhooks>
 #include <cstrike>
@@ -46,12 +47,18 @@ enum DisplayType {
 DisplayArea g_ClientDisplayArea[MAXPLAYERS+1];
 DisplayType g_ClientDisplayType[MAXPLAYERS+1];
 
+bool   g_LateLoaded;
 bool   g_IsCSGO;
 Handle g_Timer = INVALID_HANDLE;
 
 Handle g_MenuMain = INVALID_HANDLE;
 Handle g_MenuArea = INVALID_HANDLE;
 Handle g_MenuType = INVALID_HANDLE;
+
+Handle g_hEnabledCookie = INVALID_HANDLE;
+Handle g_hAreaCookie = INVALID_HANDLE;
+Handle g_hTypeCookie = INVALID_HANDLE;
+Handle g_hJumpCookie = INVALID_HANDLE;
 
 bool   g_ClientOnOff[MAXPLAYERS+1];
 float  g_DisplayRate;
@@ -61,6 +68,11 @@ bool   g_ClientJumpOnOff[MAXPLAYERS+1];
 float  g_JumpTime[MAXPLAYERS+1];
 float  g_JumpVel[MAXPLAYERS+1][3];
 JumpState g_JumpState[MAXPLAYERS+1];
+
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max){
+	g_LateLoaded = late;
+	return APLRes_Success;
+}
 
 public OnPluginStart(){
 	char sFolder[8];
@@ -99,6 +111,11 @@ public OnPluginStart(){
 	AddMenuItem(g_MenuType, "DisplayTypeMPH", "MPH");
 	AddMenuItem(g_MenuType, "DisplayTypeKPH", "KPH");
 
+	g_hEnabledCookie = RegClientCookie("zspeedo_enabled", "", CookieAccess_Private);
+	g_hAreaCookie = RegClientCookie("zspeedo_area", "", CookieAccess_Private);
+	g_hTypeCookie = RegClientCookie("zspeedo_type", "", CookieAccess_Private);
+	g_hJumpCookie = RegClientCookie("zspeedo_jump", "", CookieAccess_Private);
+
 	g_CvarDisplayRate = CreateConVar("speedometer_displayrate", "0.1", "Display update rate in seconds", 0, true, 0.01, true, 1.0);
 	g_CvarDisplayRate.AddChangeHook(OnDisplayRateChanged);
 	OnDisplayRateChanged(g_CvarDisplayRate, "", "");
@@ -112,12 +129,47 @@ public OnPluginStart(){
 	}
 }
 
+public OnAllPluginsLoaded(){
+	if(!g_LateLoaded){
+		return;
+	}
+   
+	g_LateLoaded = false;
+   
+	for (int client = 1; client <= MaxClients; client++){
+		if(AreClientCookiesCached(client)){
+			OnClientCookiesCached(client);
+		}
+	}
+}
+
 public OnClientPutInServer(client){
 	g_JumpState[client] = JumpStateNo;
-	g_ClientOnOff[client] = false;
-	g_ClientJumpOnOff[client] = false;
-	g_ClientDisplayArea[client] = DisplayAreaCenter;
-	g_ClientDisplayType[client] = DisplayTypeVelocityXY;
+}
+
+public void OnClientCookiesCached(int client){
+	char sEnabled[8], sArea[8], sType[8], sJump[8];
+	GetClientCookie(client, g_hEnabledCookie, sEnabled, sizeof(sEnabled));
+	GetClientCookie(client, g_hAreaCookie, sArea, sizeof(sArea));
+	GetClientCookie(client, g_hTypeCookie, sType, sizeof(sType));
+	GetClientCookie(client, g_hJumpCookie, sJump, sizeof(sJump));
+
+	if(sEnabled[0] == '\0' || strlen(sEnabled) == 0){
+		SetClientCookie(client, g_hEnabledCookie, "0");
+		SetClientCookie(client, g_hAreaCookie, "3");
+		SetClientCookie(client, g_hTypeCookie, "0");
+		SetClientCookie(client, g_hJumpCookie, "0");
+
+		sEnabled = "0";
+		sArea = "3";
+		sType = "0";
+		sJump = "0";
+	}
+ 
+	g_ClientOnOff[client] = view_as<bool>(StringToInt(sEnabled));
+	g_ClientDisplayArea[client] = view_as<DisplayArea>(StringToInt(sArea));
+	g_ClientDisplayType[client] = view_as<DisplayType>(StringToInt(sType));
+	g_ClientJumpOnOff[client] = view_as<bool>(StringToInt(sJump));
 }
 
 public Action SM_Speed(client, args){
@@ -136,12 +188,20 @@ public MenuMainHandler(Handle menu, MenuAction action, param1, param2){
 			g_ClientOnOff[param1] = !g_ClientOnOff[param1];
 			PrintToChat(param1, "\x04[Speedometer]:\x01 Display %s",
 				g_ClientOnOff[param1]?"On":"Off");
+
+			char sBuffer[8];
+			IntToString(view_as<int>(g_ClientOnOff[param1]), sBuffer, sizeof(sBuffer));
+			SetClientCookie(param1, g_hEnabledCookie, sBuffer);
 		}
 		else if (0 == strcmp(sItem, "jump")){
 			g_ClientJumpOnOff[param1] = !g_ClientJumpOnOff[param1];
 			g_ClientOnOff[param1] = true;
 			PrintToChat(param1, "\x04[Speedometer]:\x01 Jump %s",
 				g_ClientJumpOnOff[param1]?"On":"Off");
+
+			char sBuffer[8];
+			IntToString(view_as<int>(g_ClientJumpOnOff[param1]), sBuffer, sizeof(sBuffer));
+			SetClientCookie(param1, g_hJumpCookie, sBuffer);
 		}
 		else if (0 == strcmp(sItem, "area")){
 			DisplayMenu(g_MenuArea, param1, 30);
@@ -188,6 +248,11 @@ public MenuAreaHandler(Handle menu, MenuAction action, param1, param2){
 			return;
 		}
 		g_ClientOnOff[param1] = true;
+
+		char sBuffer[8];
+		IntToString(view_as<int>(g_ClientDisplayArea[param1]), sBuffer, sizeof(sBuffer));
+		SetClientCookie(param1, g_hAreaCookie, sBuffer);
+
 		PrintToChat(param1, "\x04[Speedometer]:\x01 Area set to %s", sItem);
 		DisplayMenu(g_MenuMain, param1, 30);
 	}
@@ -217,6 +282,11 @@ public MenuTypeHandler(Handle menu, MenuAction action, param1, param2){
 			return;
 		}
 		g_ClientOnOff[param1] = true;
+		
+		char sBuffer[8];
+		IntToString(view_as<int>(g_ClientDisplayType[param1]), sBuffer, sizeof(sBuffer));
+		SetClientCookie(param1, g_hTypeCookie, sBuffer);
+
 		DisplayMenu(g_MenuMain, param1, 30);
 		PrintToChat(param1, "\x04[Speedometer]:\x01 Type set to %s", sItem);
 	}
