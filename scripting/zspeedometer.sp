@@ -15,6 +15,7 @@
 	2017.06.06	added colour, cookies. removed regex
 	2017.06.07	added spectator jump support
 	2017.06.12	fixed printhinttext & printcentertext stopping loop
+	2018.10.27	only offer DisplayAreaCenter on css
 */
 
 public Plugin myinfo = {
@@ -108,7 +109,9 @@ public OnPluginStart(){
 	g_MenuArea = CreateMenu(MenuAreaHandler);
 	SetMenuTitle(g_MenuArea, "Speedometer: Area");
 	SetMenuExitBackButton(g_MenuArea, true);
-	AddMenuItem(g_MenuArea, "DisplayAreaCenter", "Center");
+	if (!g_IsCSGO){
+		AddMenuItem(g_MenuArea, "DisplayAreaCenter", "Center");
+	}
 	AddMenuItem(g_MenuArea, "DisplayAreaHint", "Hint");
 	AddMenuItem(g_MenuArea, "DisplayAreaTopLeft", "TopLeft");
 	AddMenuItem(g_MenuArea, "DisplayAreaTopCenter", "TopCenter");
