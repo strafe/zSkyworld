@@ -16,6 +16,7 @@
 	2017.06.07	added spectator jump support
 	2017.06.12	fixed printhinttext & printcentertext stopping loop
 	2018.10.27	only offer DisplayAreaCenter on css
+	2019.01.11	dont automatically enable when selecting jump/area
 */
 
 public Plugin myinfo = {
@@ -233,7 +234,6 @@ public MenuMainHandler(Handle menu, MenuAction action, param1, param2){
 		}
 		else if (0 == strcmp(sItem, "jump")){
 			g_ClientJumpOnOff[param1] = !g_ClientJumpOnOff[param1];
-			g_ClientOnOff[param1] = true;
 			PrintToChat(param1, "\x04[Speedometer]:\x01 Jump %s",
 				g_ClientJumpOnOff[param1]?"On":"Off");
 
@@ -288,7 +288,6 @@ public MenuAreaHandler(Handle menu, MenuAction action, param1, param2){
 			DisplayMenu(menu, param1, 30);
 			return;
 		}
-		g_ClientOnOff[param1] = true;
 
 		char sBuffer[8];
 		IntToString(view_as<int>(g_ClientDisplayArea[param1]), sBuffer, sizeof(sBuffer));
