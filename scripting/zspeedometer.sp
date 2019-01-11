@@ -3,7 +3,6 @@
 #include <sdktools>
 #include <sdkhooks>
 #include <cstrike>
-#include <regex>
 
 /*
 	zee
@@ -49,7 +48,6 @@ DisplayType g_ClientDisplayType[MAXPLAYERS+1];
 
 bool   g_IsCSGO;
 Handle g_Timer = INVALID_HANDLE;
-Handle g_Regex = INVALID_HANDLE;
 
 Handle g_MenuMain = INVALID_HANDLE;
 Handle g_MenuArea = INVALID_HANDLE;
@@ -67,7 +65,8 @@ JumpState g_JumpState[MAXPLAYERS+1];
 public OnPluginStart(){
 	char sFolder[8];
 	g_IsCSGO = (GetGameFolderName(sFolder, sizeof(sFolder)) > 0 && strcmp(sFolder, "csgo") == 0);
-	g_Regex  = CompileRegex("^!speed", PCRE_CASELESS);
+
+	RegConsoleCmd("sm_speed", SM_Speed);
 
 	g_MenuMain = CreateMenu(MenuMainHandler);
 	SetMenuTitle(g_MenuMain, "Speedometer");
@@ -121,12 +120,12 @@ public OnClientPutInServer(client){
 	g_ClientDisplayType[client] = DisplayTypeVelocityXY;
 }
 
-public Action OnClientSayCommand(client, const char[] cmd, const char[] args){
-	if (client > 0 && MatchRegex(g_Regex, args) > 0){
+public Action SM_Speed(client, args){
+	if (0 < client <= MaxClients){
 		DisplayMenu(g_MenuMain, client, 30);
-		return Plugin_Stop;
 	}
-	return Plugin_Continue;
+
+	return Plugin_Handled;
 }
 
 public MenuMainHandler(Handle menu, MenuAction action, param1, param2){
