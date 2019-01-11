@@ -14,6 +14,7 @@
 	2017.05.27	added pause on jump (thanks bogroll <3)
 	2017.06.06	added colour, cookies. removed regex
 	2017.06.07	added spectator jump support
+	2017.06.12	fixed printhinttext & printcentertext stopping loop
 */
 
 public Plugin myinfo = {
@@ -477,6 +478,7 @@ public Action OnTimer(Handle timer){
 				case DisplayAreaCenter:
 				{
 					PrintCenterText(client, sOutput);
+					continue;
 				}
 				case DisplayAreaHint:
 				{
@@ -484,6 +486,7 @@ public Action OnTimer(Handle timer){
 					if (!g_IsCSGO){
 						StopSound(client, SNDCHAN_STATIC, "UI/hint.wav");
 					}
+					continue;
 				}
 				case DisplayAreaTopLeft:
 				{
